@@ -1,0 +1,68 @@
+####누적데이터인 경우 누적데이터로 해당 결과를 제시####
+#데이터 불러오기
+data2021 <- read.csv('12-31-2021.csv')
+data2020 <- read.csv('12-31-2020.csv')
+
+# R에서는 패키지를 설치했다고 곧바로 사용할 수 있게 되는 건 아닙니다. 
+# 패키지를 불러오는 절차를 한 번 더 거쳐야 합니다. 이때는 'library()'라는 함수를 씁니다
+library('dplyr')
+#select() 열선택 : 사용법; selcet(데이터, 변수 이름 또는 인덱스)
+group1 <- data2021 %>% select(Country_Region,Confirmed,Deaths) %>% group_by(Country_Region) %>% summarise(sum(Confirmed),sum(Deaths))
+group2 <- data2020 %>% select(Country_Region,Confirmed,Deaths) %>% group_by(Country_Region) %>% summarise(sum(Confirmed),sum(Deaths))
+
+# group1,group2 데이터 프레임 합치기 : merge 함수사용
+acc_result<-merge(group1,group2,by='Country_Region',all=TRUE)
+acc_result
+
+# 국가별로 집계 하고 국가, 총발생자수, 총사망자수 구하기
+# $ 사용 : 데이터 프레임의 특정 변수를 가리킬때 사용
+# $표시 앞에 명시된 데이터프레임에서 $ 표시 뒤에 나오는 변수를 가리키는것을 의미
+# (데이터프레임)$(변수)
+acc_result$tot_con <- acc_result$'sum(Confirmed).x'-acc_result$'sum(Confirmed).y'
+acc_result$tot_dea <- acc_result$'sum(Deaths).x'-acc_result$'sum(Deaths).y'
+acc_result
+
+# 총발생자수, 총사망자수(tot_con,tot_dea)
+tot_result <- select(acc_result,Country_Region,tot_con,tot_dea)
+tot_result
+
+
+#일평균 발생자수, 일평균사망자수(daily_con,daily_dea)
+options(scipen=100) #지수표기법 -> 일반표기법으로 바꾸기 : options 함수의 scipen 옵션을 사용
+# mutate(dataframe, 새로운 column명 = 기존 columns을 조합한 수식)
+# mutate() 기본적으로 데이터 프레임 자료형에 새로운 파생 column을 만드는 함수임
+# tot_result 데이터 프레임에 일평균 발생자수, 일평균사망자수 포함시키기위해 mutate() 함수 사용
+acc_final <- tot_result %>% mutate(daily_con = (tot_con/365)) %>% mutate(daily_dea = (tot_dea/365))
+acc_final
+
+# _____________________________________________________________________________________
+# %>% (파이프연산자)는 앞에있는 출력결과를 뒤에 있는 함수한테 보내주는 역할을 한다.
+# 파이프를 이용해서 함수를 계속 연결 할 수 있다.
+# 행을 추출할 때는 filter(), 열을 추출할 때는 select()
+# row 추출하는 filter()함수 사용
+# 데이터가 NA인 경우 제시(=코로나환자 NA) (하나라도 NA을 가지고 있으면 보여주기 위해 "|" 사용
+acc_final %>% subset(is.na(tot_dea)|is.na(tot_con)) %>% select(Country_Region)
+# 데이터가 0인 경우 제시(=코로나환자0) (하나라도 0을 가지고 있으면 보여주기 위해 "|" 사용)
+acc_final %>% filter(tot_con ==0 & tot_dea ==0) %>% select(Country_Region)
+# 데이터가 NA인 경우 제외 (하나라도 NA인 값을 가지고 있으면 제외 하기 위해 "|"사용)
+acc_final %>% filter(tot_con >=0 | tot_dea >=0) %>% select(Country_Region)
+
+# _____________________________________________________________________________________
+#데이터 셋의 특정 컬럼을 기준으로 오름차순 또는 내림차순으로 정렬하는 arrange()함수 사용
+#desc()함수로 지정하는 경우 내림차순으로 정력한다.
+# head(n)은 n = 6이 디폴트 값이기 때문에 n을 별도로 지정하지 않을 경우 자동으로 상위 6개 행이 불러와 지기때문에 n 지정
+# 총 발생자수
+arr1 <- acc_final %>% arrange(desc(tot_con)) %>% head(20) ;arr1
+# 총 사망자수
+arr2 <- acc_final %>% arrange(desc(tot_dea)) %>% head(20) ;arr2
+# 일평균 발생자수
+arr3 <- acc_final %>% arrange(desc(daily_con)) %>% head(20) ;arr3
+# 일평균 사망자 수
+arr4 <- acc_final %>% arrange(desc(daily_dea)) %>% head(20) ;arr4
+
+# _____________________________________________________________________________________
+
+acc_final %>% filter(Country_Region == 'Korea, South')
+
+
+
