@@ -1,0 +1,52 @@
+#pandas의 import 컨벤션
+import pandas as pd
+#numpy의 import 컨벤션
+import numpy as np
+
+#문제1 ____________________________________________________________________________________________________________________
+#데이터 불러오기
+data2021 = pd.read_csv('covid-19/12-31-2021.csv') #2021년  12월 31일 데이터 불러오기
+data2020 = pd.read_csv('covid-19/12-31-2020.csv') #2021년 12월 30일 데이터 불러오기
+
+#데이터에서 나라가 아닌 'Olympics' 제거하기
+del_olympics = data2021[data2021['Country_Region'].str.contains('Olympics')].index #data2021의 index인 'Country_Region'에서 'Olympics'를 포함한 단어 찾기
+del_olympics2 = data2020[data2020['Country_Region'].str.contains('Olympics')].index #data2020의 index인 'Country_Region'에서 'Olympics'를 포함한 단어 찾기
+data2021.drop(del_olympics, inplace=True) #data2021에서 'Olympics'를 포함한 행을 삭제하기
+data2020.drop(del_olympics2, inplace=True) #data2020에서 'Olympics'를 포함한 행을 삭제하기
+
+subset2021 = data2021 [['Country_Region','Confirmed','Deaths']] #data2021에서 필요한 column 선택하기
+subset2020 = data2020 [['Country_Region','Confirmed','Deaths']] #data2020에서 필요한 column 선택하기
+
+group1=subset2020.groupby('Country_Region').sum() #subset2020에서 나라별 중복제거해서 합치기
+group2=subset2021.groupby('Country_Region').sum() #subset2021에서 나라별 중복제거해서 합치기
+
+tot_condea = group2.sub(group1) #2021년 총 발생자 & 사망자 수 구하기
+daily_condea = tot_condea / 365 #2021년 일평균 발생자 & 사망자 수 구하기
+
+tot = tot_condea.rename(columns = {'Confirmed' : 'tot_con', 'Deaths' : 'tot_dea'}) #총 발생자 & 사망자의 column명 설정하기
+daily = daily_condea.rename(columns = {'Confirmed' : 'daily_con', 'Deaths' : 'daily_dea'}) #일평균 발생자 & 사망자의 column명 설정하기
+
+result = pd.concat([tot,daily],axis=1) #총 발생자 & 사망자와 일평균 발생자 & 사망자를 열기준으로 합치기
+
+final = result.reset_index() #인덱스 재설정하기
+pd.set_option('display.colheader_justify', 'center') #column명 가운데 정렬하기
+print(final) #데이터 출력
+#문제2 ____________________________________________________________________________________________________________________
+Ans1 = final.loc[final['tot_con']==0] #값이 0인 데이터 찾기
+Ans2 = final[final['tot_con'].isnull()] #값이 NaN인 데이터 찾기
+print(Ans1['Country_Region']) #값이 0인 데이터 국가명만 뽑아내기
+print(Ans2['Country_Region']) #값이 NaN인 국가명만 뽑아내기
+final2 = final.drop(Ans2.index[0:len(Ans2)]) #값이 NaN인 인덱스 빼기
+final2["Country_Region"] #최종 결과값 국가명만 뽑아내기
+#문제3 ____________________________________________________________________________________________________________________
+tot_con = final2.sort_values('tot_con',ascending=False)  #총 발생자 수 가장 많은 국가 내림차순으로 정렬
+tot_con.head(20) #내림차순으로 정렬한 총 발생자 수에서 상위 20개국 출력하기
+tot_dea = final2.sort_values('tot_dea',ascending=False) #총 사망자 수 가장 많은 국가 내림차순으로 정렬
+tot_dea.head(20) #내림차순으로 정렬한 총 사망자 수에서 상위 20개국 출력하기
+daily_con = final2.sort_values('daily_con',ascending=False) #일평균 발생자 수 가장 많은 국가 내림차순으로 정렬
+daily_con.head(20) #내림차순으로 정렬한 일평균 발생자 수에서 상위 20개국 출력하기
+daily_dea = final2.sort_values('daily_dea',ascending=False) #일평균 사망자 수 가장 많은 국가 내림차순으로 정렬
+daily_dea.head(20) #내림차순으로 정렬한 일평균 사망자 수에서 상위 20개국 출력하기
+#문제4 ____________________________________________________________________________________________________________________
+sub2=final2.loc[final2["Country_Region"]=="Korea, South"] #'Country_Region' column에서 'Korea, South'와 일치하는 데이터 추출하기
+print(sub2) #추출한 데이터 출력하기
